@@ -4,6 +4,13 @@ const userSchema = new mongoose.Schema({
     email: {
         type: String,
         required: true
+    },
+    otp: {
+        type: Number
+    },
+    accessToken : {
+        type: String,
+        required: true
     }
 });
 
