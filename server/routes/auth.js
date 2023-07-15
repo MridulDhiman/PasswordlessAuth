@@ -5,6 +5,25 @@ const nodemailer = require('nodemailer');
 const generateToken  = require('../utils/jwt.js');
 const jwt =require('jsonwebtoken');
 require("dotenv").config();
+const {authenticator, totp} = require("otplib");
+var readlineSync = require('readline-sync');
+const User = require("../models/auth.js")
+
+
+
+const secret = authenticator.generateSecret();
+//otp
+const token = totp.generate(secret);
+console.log(token, secret);
+let isValidOtp = authenticator.verify({
+token: token,
+secret: secret
+})
+
+
+// const otp = readlineSync.question('Enter your otp: ');
+
+    
 
 const transportOptions = {
     host: process.env.SMTP_HOST,
@@ -18,12 +37,10 @@ const transportOptions = {
     
 const transporter = nodemailer.createTransport(transportOptions);
 console.log(transporter.options)
-const emailHtmlTemplate = ({email, link}) => `
+const emailHtmlTemplate = ({email, otp}) => `
 <p> <b> Dear ${email} </b></p>  
-<p> Click the link to get account access: ${link}</p>
+<p> type the otp to login: ${otp}</p>
  `;
-
-
 
 router.get('/account', (req,res) => {
     // taking token query parameter from the request 
@@ -68,22 +85,70 @@ router.get('/account', (req,res) => {
      }
 })
 
-router.post("/login", async (req, res) => {
+let accessToken;
+router.post("/login/otp",  async (req, res)=>{
+   
+    const {otp} = req.body;
+    try {
+        const user = await User.find({otp: otp});   
+        if( user == null) {
+            res.status(401).send({message: "User unauthorized"});
+        }
+        else {
+            const isValidOtp = authenticator.verify({
+                token: user.otp,
+                secret: secret
+            })
+            
+
+        res.redirect(`/account?token=${accessToken}`);
+           
+       
+        }
+      
+    }
+    catch(err) {
+        console.log(err);
+    }
+})
+router.post("/login",  async (req, res) => {
     const email = req.body.email;
     console.log(email);
+   
     if(!email) {
         res.sendStatus(404);
     }
 
+
 //get token
- const accessToken = generateToken(email);
+
+  accessToken = generateToken(email);
+
+  // add user to database
+const newUser = new User({
+    email,
+    accessToken,
+    otp: token,
+})
+
+try {
+const user = await newUser.save();
+
+//new user created
+res.status(201).send(user);
+}
+
+catch (err) {
+res.send({message: err.message})
+}
+
  const mailOptions = {
     from: "donotreply",
     to: email,
     subject: "Login using the magic link",
     html : emailHtmlTemplate({
        email,
-       link:  `http://localhost:5000/account?token=${accessToken}`,
+       otp:  token,
     })
 };
 
@@ -92,10 +157,17 @@ return  transporter.sendMail(mailOptions, (error) => {
       res.send({message: error.message});
     } else {
       res.status(200);
-      res.send(`Magic link sent. : http://localhost:5000/account?token=${accessToken}`);
+      res.write(`otp sent to ${email}`)
     }
   });
 });
+
+
+
+
+
+  
+
 
 
 module.exports = router;
