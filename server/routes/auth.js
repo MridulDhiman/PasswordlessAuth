@@ -89,19 +89,23 @@ let accessToken;
 router.post("/login/otp",  async (req, res)=>{
    
     const {otp} = req.body;
+    if(otp == null) {
+        res.sendStatus(403);
+    }
     try {
-        const user = await User.find({otp: otp});   
+        const user = await User.find({accessToken: accessToken});   
         if( user == null) {
             res.status(401).send({message: "User unauthorized"});
         }
         else {
-            const isValidOtp = authenticator.verify({
-                token: user.otp,
-                secret: secret
-            })
-            
 
-        res.redirect(`/account?token=${accessToken}`);
+            if(user[0].otp == otp) {
+                res.redirect(`/account?token=${accessToken}`);
+            }
+            else {
+                res.status(401).send({message: "otp does not match"})
+            }
+
            
        
         }
