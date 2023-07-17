@@ -106,6 +106,7 @@ background:   linear-gradient(to right, #ff512f, #f09819) no-repeat;
   }
   .form-box {
     display: grid;
+    
   }
   .input-main {
     margin-right: 0;
@@ -165,4 +166,20 @@ background:   linear-gradient(to right, #ff512f, #f09819) no-repeat;
 
 .two {
   display: none;
+}
+
+#phone {
+  display: none;
+}
+
+.phone__link {
+  position: absolute;
+  bottom: 40%;
+  left: 30%;
+  color: blue;
+  text-decoration: underline;
+}
+
+.phone__link:hover {
+cursor: pointer;
 }

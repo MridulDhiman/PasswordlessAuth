@@ -7,8 +7,9 @@ const jwt =require('jsonwebtoken');
 require("dotenv").config();
 const {authenticator, totp} = require("otplib");
 var readlineSync = require('readline-sync');
-const User = require("../models/auth.js")
-
+const User = require("../models/auth.js");
+const mobileUser = require('../models/mobile.js')
+const client = require('twilio')(process.env.ACCOUNT_SID, process.env.AUTH_TOKEN);
 
 
 const secret = authenticator.generateSecret();
@@ -41,6 +42,10 @@ const emailHtmlTemplate = ({email, otp}) => `
 <p> <b> Dear ${email} </b></p>  
 <p> type the otp to login: ${otp}</p>
  `;
+
+ const smsTemplate = (otp) => {
+    return `\n Type the otp to login: ${otp}`
+ }
 
 router.get('/account', (req,res) => {
     // taking token query parameter from the request 
@@ -115,7 +120,41 @@ router.post("/login/otp",  async (req, res)=>{
         console.log(err);
     }
 })
-router.post("/login",  async (req, res) => {
+
+router.post('login/mobile', async (req, res) => {
+    const phoneNo = req.body.phone;
+    if(phoneNo == null) {
+        res.sendStatus(403);
+    }
+
+    const user = new mobileUser(
+        {
+            body: smsTemplate(token),
+            to: phoneNo,
+        }
+    );
+
+        try {
+const newUser = await user.save();
+res.status(201).send(user);
+        }
+        catch(err) {
+res.send({message: err.message})
+        }
+    
+    
+client.messages
+.create(user)
+.then((message) => {
+    console.log(message.body);
+    accessToken = message.sid;
+    res.redirect('/login/otp');
+})
+.done();
+
+})
+
+router.post("/login/email",  async (req, res) => {
     const email = req.body.email;
     console.log(email);
    

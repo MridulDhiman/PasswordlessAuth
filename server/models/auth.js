@@ -12,6 +12,15 @@ const userSchema = new mongoose.Schema({
     accessToken : {
         type: String,
         required: true
+    },
+    isEmail: {
+        type: Boolean,
+        default: false
+    },
+
+    isMobile: {
+        type: Boolean,
+        default: false
     }
 });
 
